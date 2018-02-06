@@ -141,6 +141,26 @@ void Heat(Image *I, Image *O, double dt, double D, int n)
   }
 }
 
+void gaussianFiltrer(Image *I, Image *O, double t)
+{
+  float pi = M_PI;
+
+  int x, y;
+  int pos;
+
+  int rows = I->height;
+  int cols = I->width;
+
+  int center_x = I->width/2;
+  int center_y = I->height/2;
+
+
+  for (y = 0; y < rows; y++) for (x = 0; x < cols; x++)
+  {
+    pos = y * cols + x;
+    O->data[pos] = O->data[pos] * ((1 / (4 * pi * t)) * exp(-((x * x + y * y) / (4 * t)));
+  }
+}
 
 int main(int argc, char **argv)
 {
@@ -153,10 +173,11 @@ int main(int argc, char **argv)
 
   initLaplaceFilter();
 
-  Heat(&image_test_in, &image_test, 0.25, 5.0, 10);
+  //Heat(&image_test_in, &image_test, 0.25, 5.0, 10);
   //Valeur seuil 0.3 environ
+  gaussianFiltrer(&image_test_in, &image_test, 10);
 
-  glutInitWindowSize(image.width, image.height);
+      glutInitWindowSize(image.width, image.height);
   glutInitWindowPosition(200, 100);
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
   glutCreateWindow("Image");
