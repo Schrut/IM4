@@ -3,7 +3,7 @@
 #include <math.h>
 #include "OutilsPGM.h"
 
-char path[100] = "lena_poivre.pgm";
+char path[100] = "lena.pgm";
 
 typedef struct
 {
@@ -12,8 +12,9 @@ typedef struct
 } Filter;
 
 Image image;
-Image image_test;
 Image image_test_in;
+Image image_test_gauss;
+Image image_test_heat;
 
 GLubyte *I; //Image de travail
 
@@ -22,7 +23,7 @@ Filter laplace;
 void initLaplaceFilter()
 {
   laplace.size = 9;
-  laplace.values = malloc(laplace.size * sizeof(float));
+  laplace.values = malloc(laplace.size * sizeof(double));
 
   laplace.values[0] = 0;
   laplace.values[1] = 1;
@@ -58,9 +59,18 @@ void redim(int width, int height)
   glMatrixMode(GL_MODELVIEW);
 }
 
-void affichage(void)
+void affichage_h(void)
 {
-  BasculeImage(&image_test, I);
+  BasculeImage(&image_test_heat, I);
+  glClear(GL_COLOR_BUFFER_BIT);
+  if (I != NULL)
+    glDrawPixels(image.width, image.height, GL_LUMINANCE, GL_UNSIGNED_BYTE, I);
+  glFlush();
+}
+
+void affichage_g(void)
+{
+  BasculeImage(&image_test_gauss, I);
   glClear(GL_COLOR_BUFFER_BIT);
   if (I != NULL)
     glDrawPixels(image.width, image.height, GL_LUMINANCE, GL_UNSIGNED_BYTE, I);
@@ -145,43 +155,81 @@ void gaussianFiltrer(Image *I, Image *O, double t)
 {
   float pi = M_PI;
 
-  int x, y;
+  int i, j;
+  int u, v;
   int pos;
+  int pos_;
+  int s;
+  int half_size;
+  int filter_center;
+  double normalization;
+  double sum;
 
-  int rows = I->height;
-  int cols = I->width;
+  sum = 0.0;
+  s = ( 3 * sqrt(t) ) + 1;
+  half_size = (2 * s + 1);
+  filter_center = (((half_size / 2) + 1) * half_size + ((half_size / 2) + 1));
 
-  int center_x = I->width/2;
-  int center_y = I->height/2;
+  Filter gaussian;
 
+  gaussian.size = half_size * half_size;
+  gaussian.values = malloc(gaussian.size * sizeof(double));
+  normalization = 1 / gaussian.size;
 
-  for (y = 0; y < rows; y++) for (x = 0; x < cols; x++)
+  for (i = 0; i < half_size; i++) for (j = 0; j < half_size; j++)
   {
-    pos = y * cols + x;
-    O->data[pos] = O->data[pos] * ((1 / (4 * pi * t)) * exp(-((x * x + y * y) / (4 * t)));
+    pos = i * half_size + j;
+    pos_ = pos - filter_center;
+    u = i - s;
+    v = j - s;
+    gaussian.values[pos] =  ( (1 / (4 * pi * t)) * exp(-((u * u + v * v) / (4 * t))));
+    sum += gaussian.values[pos];
   }
+
+//Si nous avons une norme proche de 1 il n'est pas nécessaire de normaliser notre filtre
+
+  if (sum < 0.95 || sum > 1.05 )
+  {
+    for (i = 0 ; i < gaussian.size ; i++)
+      gaussian.values[i] = gaussian.values[i] / sum;
+  }
+
+
+  LinearFilter(&gaussian, I, O);
 }
 
 int main(int argc, char **argv)
 {
   LireImage(path, &image);
   LireImage(path, &image_test_in);
-  LireImage(path, &image_test);
+  LireImage(path, &image_test_gauss);
+  LireImage(path, &image_test_heat);
 
   initGL();
   glutInit(&argc, argv);
 
   initLaplaceFilter();
 
-  //Heat(&image_test_in, &image_test, 0.25, 5.0, 10);
+  //Heat(Image *I, Image *O, double dt, double D, int n)
+  Heat(&image_test_in, &image_test_heat, 0.25, 5.0, 100);
   //Valeur seuil 0.3 environ
-  gaussianFiltrer(&image_test_in, &image_test, 10);
 
-      glutInitWindowSize(image.width, image.height);
+  //gaussianFiltrer(Image *I, Image *O, double t)
+  gaussianFiltrer(&image, &image_test_gauss, 20);
+  //Ici t remplace n et dt si dt diminue n doit augmenter et si t augment il faut augmenter n ou diminuer dt
+
+  glutInitWindowSize(image.width, image.height);
   glutInitWindowPosition(200, 100);
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
-  glutCreateWindow("Image");
-  glutDisplayFunc(affichage);
+  glutCreateWindow("Image filtre chaleur");
+  glutDisplayFunc(affichage_h);
+  glutReshapeFunc(redim);
+
+  glutInitWindowSize(image.width, image.height);
+  glutInitWindowPosition(200, 100);
+  glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
+  glutCreateWindow("Image filtre Gaussien");
+  glutDisplayFunc(affichage_g);
   glutReshapeFunc(redim);
 
   glutMainLoop();
