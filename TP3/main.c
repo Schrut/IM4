@@ -292,6 +292,7 @@ void malikAndPerona(Image* I, Image* O, double dt, int n, double lambda, int opt
 int main(int argc, char **argv)
 {
   LireImage(path, &image);
+  LireImage(path, &image_test_gauss);
 
 
   initGL();
@@ -307,7 +308,11 @@ int main(int argc, char **argv)
   //gaussianFiltrer(&image, &image_test_gauss, 20);
   //Ici t remplace n et dt si dt diminue n doit augmenter et si t augment il faut augmenter n ou diminuer dt
 	//void malikAndPerona(Image* I, Image* O, double dt, int n, int lambda, int option)
-	//malikAndPerona(&image,&image_test_gauss,0.1,100,20,1);
+	malikAndPerona(&image,&image_test_gauss,0.1,10,20,1);
+  srand(time(NULL));
+
+  for (int i = 0; i< 20 ; i++)
+    gaussianNoise((double)10);
 
   glutInitWindowSize(image.width, image.height);
   glutInitWindowPosition(200, 100);

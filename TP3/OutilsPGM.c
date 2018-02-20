@@ -128,7 +128,6 @@ void ExpansionDynamique(Image *img)
 {
 	int min = img->data[0];
 	int max = img->data[0];
-	int i;
 	int x, y;
 	int pos;
 	float alpha, beta;
@@ -143,8 +142,8 @@ void ExpansionDynamique(Image *img)
 			if (img->data[pos] < min)
 				min = img->data[pos];
 		}
-	alpha = (Max - 1) / (float)(max - min);
-	beta = -(Max - 1) * (float)min / (float)(max - min);
+	alpha =  Max/ (float)(max - min);
+	beta = - Max * (float)min / (float)(max - min);
 	for (y = 0; y < img->height; y++)
 		for (x = 0; x < img->width; x++)
 		{

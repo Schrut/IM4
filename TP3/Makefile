@@ -1,5 +1,5 @@
 EXE:=main
-CFILE:= OutilsPGM.c
+CFILE:= OutilsPGM.c noise.c
 
 all: clean $(EXE)
 
