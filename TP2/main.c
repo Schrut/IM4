@@ -224,32 +224,32 @@ double gradient (Image* I, int x, int y, int step)
   int pos_south;
   int pos_north;
 
-  pos = x * cols + y;
+  pos = x * rows + y;
   switch (step)
   {
     case 0 :
-			pos_south = x * cols + (y-1);
+			pos_south = x * rows + (y-1);
 			if (y - 1 < 0)
 				pos_south = pos;
       return I->data[pos_south] - I->data[pos];
     break;
     
     case 1 :
-			pos_north = x * cols + (y+1);
+			pos_north = x * rows + (y+1);
 			if (y + 1 >= cols )
 				pos_north = pos;
       return I->data[pos_north] - I->data[pos];
     break;
 
     case 2 :
-			pos_west = (x-1) * cols + y;
+			pos_west = (x - 1) * rows + y;
 			if (x - 1 < 0)
 				pos_west = pos;
       return I->data[pos_west] - I->data[pos];
     break;
 
     case 3 :
-		  pos_east = (x+1) * cols + y;
+			pos_east = (x + 1) * rows + y;
 			if (x + 1 >= rows )
 				pos_east = pos;
       return I->data[pos_east] - I->data[pos];
@@ -304,6 +304,7 @@ void malikAndPerona(Image* I, Image* O, double dt, int n, double lambda, int opt
 	int rows = I->height;
 	int cols = I->width;
 	int pos;
+	copyImage(I, O);
 	Image TMP;
 	CreerImage(&TMP,I->width, I->height);
 	for (i = 0; i < n; i++)
@@ -312,7 +313,7 @@ void malikAndPerona(Image* I, Image* O, double dt, int n, double lambda, int opt
 		for (y = 0; y < rows; y++)
 			for (x = 0; x < cols; x++)
 			{
-				pos = y * cols + x;
+				pos = x * rows + y;
 				for (k = 0; k < 4; k++)
 				{
 					grad = gradient(&TMP, x, y, k);
