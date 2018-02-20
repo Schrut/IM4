@@ -26,6 +26,43 @@ GLubyte *I; //Image de travail
 
 Filter laplace;
 
+void copyImage (Image* in, Image* out)
+{
+	int i;
+	for (i = 0; i < in->size ; i++)
+		out->data[i] = in->data[i];
+}
+
+void ExpansionDynamique(Image *img)
+{
+	int min = img->data[0];
+	int max = img->data[0];
+	int i;
+	int x, y;
+	int pos;
+	float alpha, beta;
+	int Max = 255;
+
+	for (y = 0; y < img->height; y++)
+		for (x = 0; x < img->width; x++)
+		{
+			pos = y * img->width + x;
+			/*Expansion Dynamique*/
+			if (img->data[pos] > max)
+				max = img->data[pos];
+			if (img->data[pos] < min)
+				min = img->data[pos];
+		}
+	alpha = (Max - 1) / (float)(max - min);
+	beta = -(Max - 1) * (float)min / (float)(max - min);
+	for (y = 0; y < img->height; y++)
+		for (x = 0; x < img->width; x++)
+		{
+			pos = y * img->width + x;
+			img->data[pos] = alpha * img->data[pos] + beta;
+		}
+}
+
 void initLaplaceFilter()
 {
   laplace.size = 9;
@@ -257,42 +294,6 @@ double gradient (Image* I, int x, int y, int step)
   }
 }
 
-void copyImage (Image* in, Image* out)
-{
-	int i;
-	for (i = 0; i < in->size ; i++)
-		out->data[i] = in->data[i];
-}
-
-void ExpansionDynamique(Image *img)
-{
-	int min = img->data[0];
-	int max = img->data[0];
-	int i;
-	int x, y;
-	int pos;
-	float alpha, beta;
-	int Max = 255;
-
-	for (y = 0; y < img->height; y++)
-		for (x = 0; x < img->width; x++)
-		{
-			pos = y * img->width + x;
-			/*Expansion Dynamique*/
-			if (img->data[pos] > max)
-				max = img->data[pos];
-			if (img->data[pos] < min)
-				min = img->data[pos];
-		}
-	alpha = (Max - 1) / (float)(max - min);
-	beta = -(Max - 1) * (float)min / (float)(max - min);
-	for (y = 0; y < img->height; y++)
-		for (x = 0; x < img->width; x++)
-		{
-			pos = y * img->width + x;
-			img->data[pos] = alpha * img->data[pos] + beta;
-		}
-}
 
 void malikAndPerona(Image* I, Image* O, double dt, int n, double lambda, int option)
 {
@@ -318,12 +319,10 @@ void malikAndPerona(Image* I, Image* O, double dt, int n, double lambda, int opt
 				{
 					grad = gradient(&TMP, x, y, k);
 					O->data[pos] += dt * f_de_x(grad, lambda, option) * grad;
-					//printf("%f\n", O->data[pos]);
 				}
 			}
 	}
-				ExpansionDynamique(O);
-	//LibererImage(&TMP);
+	LibererImage(&TMP);
 }
 
 int main(int argc, char **argv)
