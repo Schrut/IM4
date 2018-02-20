@@ -204,7 +204,7 @@ void gaussianFiltrer(Image* I, Image* O, double t)
   LinearFilter(&gaussian, I, O);
 }
 
-double f_de_x (double x, int lambda, int option)
+double f_de_x (double x, double lambda, int option)
 {
   if (option)
     return exp (- (x*x) / (lambda*lambda) );
@@ -212,71 +212,117 @@ double f_de_x (double x, int lambda, int option)
     return 1 / (1 + ( (x * x) / (lambda * lambda) ) );
 }
 
-double gradient (Image* I, int i, int j, int step)
+double gradient (Image* I, int x, int y, int step)
 {
   // On a 4 étapes de calcul :
   // Nord, Sud, Est, Ouest
-  int rows = I.height;
-  int cols = I.width;
+  int rows = I->height;
+  int cols = I->width;
   int pos;
-  int pos_i_moins;
-  int pos_i_plus;
-  int pos_j_moins;
-  int pos_j_plus;
+  int pos_west;
+  int pos_east;
+  int pos_south;
+  int pos_north;
 
-  pos = i * rows + j;
-  pos_j_plus = i * rows + (j+1);
-  pos_j_moins = i * rows + (j-1);
-  pos_i_plus = (i+1) * rows + j;
-  pos_i_moins = (i-1) * rows + j;
-
-  if (i + 1 >= rows )
-    pos_i_plus = pos;
-
-  if (i - 1 < 0)
-    pos_i_moins = pos;
-  
-  if (j + 1 >= cols )
-    pos_j_plus = pos;
-
-  if (j - 1 < 0)
-    pos_j_moins = pos;
-
+  pos = x * cols + y;
   switch (step)
   {
     case 0 :
-      return I.data[pos_j_moins] - I.data[pos];
+			pos_south = x * cols + (y-1);
+			if (y - 1 < 0)
+				pos_south = pos;
+      return I->data[pos_south] - I->data[pos];
     break;
     
     case 1 :
-      return I.data[pos_j_plus] - I.data[pos];
+			pos_north = x * cols + (y+1);
+			if (y + 1 >= cols )
+				pos_north = pos;
+      return I->data[pos_north] - I->data[pos];
     break;
 
     case 2 :
-      return I.data[pos_i_moins] - I.data[pos];
+			pos_west = (x-1) * cols + y;
+			if (x - 1 < 0)
+				pos_west = pos;
+      return I->data[pos_west] - I->data[pos];
     break;
 
     case 3 :
-      return I.data[pos_i_plus] - I.data[pos];
+		  pos_east = (x+1) * cols + y;
+			if (x + 1 >= rows )
+				pos_east = pos;
+      return I->data[pos_east] - I->data[pos];
     break;
   }
 }
 
-void malikAndPerona(Image* I, Image *O, double dt, int n, int lambda, int option)
+void copyImage (Image* in, Image* out)
+{
+	int i;
+	for (i = 0; i < in->size ; i++)
+		out->data[i] = in->data[i];
+}
+
+void ExpansionDynamique(Image *img)
+{
+	int min = img->data[0];
+	int max = img->data[0];
+	int i;
+	int x, y;
+	int pos;
+	float alpha, beta;
+	int Max = 255;
+
+	for (y = 0; y < img->height; y++)
+		for (x = 0; x < img->width; x++)
+		{
+			pos = y * img->width + x;
+			/*Expansion Dynamique*/
+			if (img->data[pos] > max)
+				max = img->data[pos];
+			if (img->data[pos] < min)
+				min = img->data[pos];
+		}
+	alpha = (Max - 1) / (float)(max - min);
+	beta = -(Max - 1) * (float)min / (float)(max - min);
+	for (y = 0; y < img->height; y++)
+		for (x = 0; x < img->width; x++)
+		{
+			pos = y * img->width + x;
+			img->data[pos] = alpha * img->data[pos] + beta;
+		}
+}
+
+void malikAndPerona(Image* I, Image* O, double dt, int n, double lambda, int option)
 {
   int i;
   int k;
+	int x;
+	int y;
   double grad;
-  Image TMP;
-  for (i = 0 ; i < n ; i++)
-  {
-    //COpier Image o dans tmp
-    for (k = 0 ; k < 4 ; k++)
-    {
-      grad = gradient(TMP,x,y,k);
-      O.data[pos] = O.data[pos] + dt * f_de_x(grad, lambda, option)*grad;
-    }
-  }
+	int rows = I->height;
+	int cols = I->width;
+	int pos;
+	Image TMP;
+	CreerImage(&TMP,I->width, I->height);
+	for (i = 0; i < n; i++)
+	{
+		copyImage(O, &TMP);
+		for (y = 0; y < rows; y++)
+			for (x = 0; x < cols; x++)
+			{
+				pos = y * cols + x;
+				for (k = 0; k < 4; k++)
+				{
+					grad = gradient(&TMP, x, y, k);
+					O->data[pos] += dt * f_de_x(grad, lambda, option) * grad;
+					//printf("%f\n", O->data[pos]);
+				}
+			}
+	}
+				ExpansionDynamique(O);
+	//LibererImage(&TMP);
 }
 
 int main(int argc, char **argv)
@@ -292,24 +338,26 @@ int main(int argc, char **argv)
   initLaplaceFilter();
 
   //Heat(Image *I, Image *O, double dt, double D, int n)
-  Heat(&image_test_in, &image_test_heat, 0.25, 5.0, 100);
+  //Heat(&image_test_in, &image_test_heat, 0.25, 5.0, 100);
   //Valeur seuil 0.3 environ
 
   //gaussianFiltrer(Image *I, Image *O, double t)
-  gaussianFiltrer(&image, &image_test_gauss, 20);
+  //gaussianFiltrer(&image, &image_test_gauss, 20);
   //Ici t remplace n et dt si dt diminue n doit augmenter et si t augment il faut augmenter n ou diminuer dt
+	//void malikAndPerona(Image* I, Image* O, double dt, int n, int lambda, int option)
+	malikAndPerona(&image,&image_test_gauss,0.1,100,20,1);
 
   glutInitWindowSize(image.width, image.height);
   glutInitWindowPosition(200, 100);
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
-  glutCreateWindow("Image filtre chaleur");
+  glutCreateWindow("Image Originale");
   glutDisplayFunc(affichage_h);
   glutReshapeFunc(redim);
 
   glutInitWindowSize(image.width, image.height);
   glutInitWindowPosition(200, 100);
   glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
-  glutCreateWindow("Image filtre Gaussien");
+  glutCreateWindow("Image Malik Perrona");
   glutDisplayFunc(affichage_g);
   glutReshapeFunc(redim);
 
